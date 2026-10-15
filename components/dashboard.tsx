@@ -4,9 +4,13 @@ import type { Session } from "@supabase/supabase-js";
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from "react";
 import { nextSearchAt } from "@/lib/cooldown";
 import { COUNTRIES } from "@/lib/countries";
+import { canMatch } from "@/lib/score";
 import { supabase } from "@/lib/supabase";
 
+type Mode = "resume" | "title";
+
 type Profile = {
+  mode: Mode;
   target_title: string | null;
   country: string;
   location: string | null;
@@ -40,15 +44,42 @@ function Window({ title, children }: { title: string; children: React.ReactNode 
 // shortcut: the cooldown label is computed on render, so a tab left open past the unlock time needs a refresh.
 function SearchNow({ profile, searching, onClick }: { profile: Profile; searching: boolean; onClick: () => void }) {
   const next = nextSearchAt(profile.last_manual_scan_at);
+  const ready = canMatch(profile);
   const label = searching
     ? "searching…"
-    : next
+    : !ready
+      ? "upload your resume first"
+      : next
       ? `search again at ${new Date(next).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).toLowerCase()}`
       : "search now";
   return (
-    <button className="dk-btn dk-btn--sm dk-blue" onClick={onClick} disabled={searching || !!next || !profile.target_title}>
+    <button className="dk-btn dk-btn--sm dk-blue" onClick={onClick} disabled={searching || !ready || !!next || !profile.target_title}>
       {label}
     </button>
+  );
+}
+
+const TITLE_ONLY_TIP =
+  "job title only skips your resume: listings are scored on how closely the title matches yours, plus location. " +
+  "expect more loosely related jobs and rougher scores.";
+
+function ModePicker({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => void }) {
+  return (
+    <div className="modes">
+      <div className="dk-segmented" role="group" aria-label="how jobs are matched">
+        <button type="button" className="dk-seg" aria-pressed={mode === "resume"} onClick={() => onChange("resume")}>
+          match my resume
+        </button>
+        <button type="button" className="dk-seg" aria-pressed={mode === "title"} onClick={() => onChange("title")}>
+          job title only
+        </button>
+      </div>
+      {mode === "title" && (
+        <span className="tip dk-badge dk-orange" tabIndex={0} data-tip={TITLE_ONLY_TIP}>
+          noisier matches
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -65,7 +96,7 @@ export default function Dashboard({ session }: { session: Session }) {
       supabase
         .from("matches")
         .select("score, created_at, jobs(id, title, company, location, is_remote, url)")
-        .order("created_at", { ascending: false })
+        .order("score", { ascending: false })
         .limit(50),
     ]);
     if (p.error || m.error) return setStatus((p.error ?? m.error)!.message);
@@ -116,6 +147,18 @@ export default function Dashboard({ session }: { session: Session }) {
     load();
   }
 
+  async function setMode(mode: Mode) {
+    const { error } = await supabase.from("profiles").update({ mode }).eq("id", session.user.id);
+    setStatus(
+      error
+        ? error.message
+        : mode === "title"
+          ? "job title only: matching on the title you enter."
+          : "matching against your resume.",
+    );
+    load();
+  }
+
   async function saveSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -137,27 +180,30 @@ export default function Dashboard({ session }: { session: Session }) {
   return (
     <main className="dk-container board">
       {status && <p className="dk-small dk-muted" role="status">{status}</p>}
+      <ModePicker mode={profile.mode} onChange={setMode} />
 
       <div className="board__top">
-        <Window title="resume.pdf">
-          {profile.summary ? (
-            <>
-              <p className="dk-text">{profile.summary}</p>
-              <p className="dk-small dk-muted">
-                {profile.seniority} · {profile.years_experience} years
-              </p>
-              <div className="chips">
-                {profile.skills.map((s) => <span key={s} className="dk-badge">{s}</span>)}
-              </div>
-            </>
-          ) : (
-            <p className="dk-text dk-muted">upload your resume and we&apos;ll summarize it and pull out your skills.</p>
-          )}
-          <label className="dk-btn dk-blue" aria-disabled={busy}>
-            {busy ? "reading…" : profile.summary ? "replace resume" : "upload resume"}
-            <input className="sr-only" type="file" accept="application/pdf" disabled={busy} onChange={upload} />
-          </label>
-        </Window>
+        {profile.mode === "resume" && (
+          <Window title="resume.pdf">
+            {profile.summary ? (
+              <>
+                <p className="dk-text">{profile.summary}</p>
+                <p className="dk-small dk-muted">
+                  {profile.seniority} · {profile.years_experience} years
+                </p>
+                <div className="chips">
+                  {profile.skills.map((s) => <span key={s} className="dk-badge">{s}</span>)}
+                </div>
+              </>
+            ) : (
+              <p className="dk-text dk-muted">upload your resume and we&apos;ll summarize it and pull out your skills.</p>
+            )}
+            <label className="dk-btn dk-blue" aria-disabled={busy}>
+              {busy ? "reading…" : profile.summary ? "replace resume" : "upload resume"}
+              <input className="sr-only" type="file" accept="application/pdf" disabled={busy} onChange={upload} />
+            </label>
+          </Window>
+        )}
 
         <Window title="search">
           <form className="stack" onSubmit={saveSearch} key={profile.target_title ?? ""}>
@@ -165,7 +211,7 @@ export default function Dashboard({ session }: { session: Session }) {
               target job title
               <input className="dk-input" name="title" defaultValue={profile.target_title ?? ""} required />
             </label>
-            {profile.suggested_titles.length > 0 && (
+            {profile.mode === "resume" && profile.suggested_titles.length > 0 && (
               <div className="chips">
                 <span className="tip dk-badge dk-blue" tabIndex={0} data-tip="ai suggested these titles from your resume">
                   ai

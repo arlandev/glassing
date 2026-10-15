@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { MIN_SCORE, levelOf, scoreJob } from "./score.ts";
 
 const dev = {
+  mode: "resume",
   target_title: "Frontend Engineer",
   location: "Austin, TX",
   remote_only: false,
@@ -42,4 +43,26 @@ test("seniority comes from the job title", () => {
   assert.equal(levelOf("Data Analyst"), 1);
   assert.equal(levelOf("Sr Data Analyst"), 2);
   assert.equal(levelOf("Senior Staff Engineer"), 3);
+});
+
+const titleOnly = { mode: "title", target_title: "AI Engineer", location: null, remote_only: false, skills: [], seniority: null };
+
+test("title mode: a full title match passes without a resume", () => {
+  const job = { title: "Senior AI Engineer", description: null, location: "Makati City", is_remote: false };
+  assert.equal(scoreJob(titleOnly, job), 100);
+});
+
+test("title mode: half a title stays under the threshold", () => {
+  const job = { title: "Software Engineer", description: "we use ai", location: "Makati City", is_remote: false };
+  assert.ok(scoreJob(titleOnly, job) < MIN_SCORE);
+});
+
+test("title mode: remote-only still filters on-site jobs", () => {
+  const job = { title: "AI Engineer", description: null, location: "Makati City", is_remote: false };
+  assert.equal(scoreJob({ ...titleOnly, remote_only: true }, job), 0);
+});
+
+test("resume mode without a resume can't reach the threshold", () => {
+  const job = { title: "AI Engineer", description: null, location: null, is_remote: true };
+  assert.ok(scoreJob({ ...titleOnly, mode: "resume" }, job) < MIN_SCORE);
 });

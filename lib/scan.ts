@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchJobs } from "@/lib/jsearch";
-import { MIN_SCORE, scoreJob } from "@/lib/score";
+import { MIN_SCORE, canMatch, scoreJob } from "@/lib/score";
 
-export const SEARCH_PROFILE_COLUMNS = "id, target_title, country, location, remote_only, skills, seniority";
+export const SEARCH_PROFILE_COLUMNS = "id, mode, target_title, country, location, remote_only, skills, seniority";
 
 export type SearchProfile = {
   id: string;
+  mode: string;
   target_title: string;
   country: string;
   location: string | null;
@@ -18,7 +19,7 @@ export type SearchProfile = {
 // Pass `notifiedAt` to save matches as already seen (a user who searched on the dashboard doesn't need an email).
 export async function runSearches(db: SupabaseClient, profiles: SearchProfile[], notifiedAt: string | null = null) {
   const searches = new Map<string, SearchProfile[]>();
-  for (const p of profiles) {
+  for (const p of profiles.filter(canMatch)) {
     const key = [p.target_title, p.country, p.location ?? "", p.remote_only].join("|").toLowerCase();
     searches.set(key, [...(searches.get(key) ?? []), p]);
   }

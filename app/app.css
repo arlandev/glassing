@@ -47,8 +47,11 @@ select.dk-input {
   content: attr(data-tip);
   position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 10;
   padding: 6px 10px; border-radius: var(--dk-radius);
-  font-size: 12px; font-weight: 400; white-space: nowrap; text-shadow: none;
+  width: max-content; max-width: 280px;
+  font-size: 12px; font-weight: 400; line-height: 1.4; white-space: normal; text-shadow: none;
   color: #fff; background: rgba(0, 0, 0, .85);
   opacity: 0; pointer-events: none; transition: opacity .15s;
 }
 .tip:hover::after, .tip:focus-visible::after { opacity: 1; }
+
+.modes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--dk-space-3); }

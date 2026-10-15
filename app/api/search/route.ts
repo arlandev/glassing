@@ -1,6 +1,7 @@
 import { admin, userFrom } from "@/lib/admin";
 import { nextSearchAt, windowStart } from "@/lib/cooldown";
 import { SEARCH_PROFILE_COLUMNS, runSearches, type SearchProfile } from "@/lib/scan";
+import { canMatch } from "@/lib/score";
 
 export const maxDuration = 120;
 
@@ -11,9 +12,16 @@ export async function POST(req: Request) {
   const db = admin();
 
   // Claim this window's search in one update, so a double click can't run two.
-  const previous = await db.from("profiles").select("target_title, last_manual_scan_at").eq("id", user.id).single();
+  const previous = await db
+    .from("profiles")
+    .select("mode, skills, target_title, last_manual_scan_at")
+    .eq("id", user.id)
+    .single();
   if (previous.error) throw previous.error;
   if (!previous.data.target_title) return Response.json({ error: "save a target job title first" }, { status: 400 });
+  if (!canMatch(previous.data)) {
+    return Response.json({ error: "upload your resume first, or switch to job title only" }, { status: 400 });
+  }
 
   const claimed = await db
     .from("profiles")
