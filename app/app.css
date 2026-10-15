@@ -38,3 +38,17 @@ select.dk-input {
 }
 
 .dk-btn:disabled, .dk-btn[aria-disabled="true"] { opacity: .5; cursor: default; }
+
+/* ai title suggestions: badge pills that fill the title field, with a hover/focus tooltip on the "ai" badge */
+.chips button.dk-badge { cursor: pointer; font-family: inherit; }
+.chips button.dk-badge:hover { opacity: .8; }
+.tip { position: relative; overflow: visible; cursor: help; }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 10;
+  padding: 6px 10px; border-radius: var(--dk-radius);
+  font-size: 12px; font-weight: 400; white-space: nowrap; text-shadow: none;
+  color: #fff; background: rgba(0, 0, 0, .85);
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.tip:hover::after, .tip:focus-visible::after { opacity: 1; }

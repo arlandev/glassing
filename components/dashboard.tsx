@@ -163,11 +163,27 @@ export default function Dashboard({ session }: { session: Session }) {
           <form className="stack" onSubmit={saveSearch} key={profile.target_title ?? ""}>
             <label>
               target job title
-              <input className="dk-input" name="title" list="titles" defaultValue={profile.target_title ?? ""} required />
-              <datalist id="titles">
-                {profile.suggested_titles.map((t) => <option key={t} value={t} />)}
-              </datalist>
+              <input className="dk-input" name="title" defaultValue={profile.target_title ?? ""} required />
             </label>
+            {profile.suggested_titles.length > 0 && (
+              <div className="chips">
+                <span className="tip dk-badge dk-blue" tabIndex={0} data-tip="ai suggested these titles from your resume">
+                  ai
+                </span>
+                {profile.suggested_titles.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="dk-badge dk-lower"
+                    onClick={(e) => {
+                      (e.currentTarget.form!.elements.namedItem("title") as HTMLInputElement).value = t;
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
             <label>
               country
               <select className="dk-input" name="country" defaultValue={profile.country} required>
