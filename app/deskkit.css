@@ -1,0 +1,301 @@
+/*
+ * deskkit — a retro-mac "desktop" design system.
+ * Tokens reverse-engineered from heyclicky.com (Oct 2026). Image assets replaced with pure CSS.
+ * Usage: <link rel="stylesheet" href="deskkit/deskkit.css">  — see README.md
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@1&display=swap");
+
+/* ───────────────────────── tokens ───────────────────────── */
+:root {
+  --dk-font-sans: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --dk-font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --dk-font-serif: "Instrument Serif", Georgia, serif;
+  --dk-ls: -0.03em; /* every size on the source uses -3% tracking */
+
+  /* ink: black at stepped opacities, never grays */
+  --dk-bg: #f5f5f5;
+  --dk-surface: #fff;
+  --dk-ink: #000;
+  --dk-ink-2: rgba(0, 0, 0, .6);
+  --dk-ink-3: rgba(0, 0, 0, .5);
+  --dk-ink-4: rgba(0, 0, 0, .4);
+  --dk-ink-5: rgba(0, 0, 0, .3);
+  --dk-line: rgba(0, 0, 0, .05);
+  --dk-line-dotted: rgba(0, 0, 0, .15);
+  --dk-dot: rgba(0, 0, 0, .13);
+  --dk-accent: #0f7fff;
+  --dk-focus: #1d6ee5;
+  --dk-highlight: rgba(254, 234, 61, .35);
+  --dk-success: #0f9d3a;
+  --dk-success-bg: rgba(25, 195, 50, .15);
+
+  /* glossy "aqua" surfaces: fill + edge */
+  --dk-silver: linear-gradient(#fbfbfb 0%, #ededed 42%, #e4e4e4 100%);
+  --dk-silver-edge: #626262;
+  --dk-blue: linear-gradient(#edf4ff 0%, #d6e7ff 18%, #a2c7ff 50%, #99cbf8 80%, #a2d2f7 100%);
+  --dk-blue-edge: #221898;
+  --dk-orange: linear-gradient(#ffe9d6 0%, #ffc999 42%, #ffe9d6 100%);
+  --dk-orange-edge: #9a5518;
+  --dk-teal: linear-gradient(#d6fffb 0%, #00c8b3 42%, #d6fffb 100%);
+  --dk-teal-edge: #158479;
+  --dk-green: linear-gradient(#effbf1 0%, #d9f5dd 18%, #c9f0cf 50%, #c9f0cf 82%, #cef2d4 100%);
+  --dk-green-edge: #9bbc9f;
+
+  --dk-glass: linear-gradient(rgba(255, 255, 255, .3), rgba(231, 231, 231, .3) 42%, rgba(251, 251, 251, .3));
+  --dk-glass-blur: blur(8px) saturate(1.3);
+  --dk-chrome: linear-gradient(90deg, #d6d5d7 0%, #f0f0f0 50%, #d6d5d7 100%);
+  --dk-chrome-edge: linear-gradient(#000 0%, rgba(0, 0, 0, .1) 100%);
+  --dk-sky: linear-gradient(#2a6fb5 0%, #7db0dd 52%, #dcecf7 100%);
+
+  --dk-radius-sm: 4px;
+  --dk-radius: 8px;
+  --dk-radius-lg: 16px;
+  --dk-radius-pill: 999px;
+
+  --dk-shadow-float: 0 10px 24px rgba(0, 0, 0, .12);
+  --dk-shadow-card: 0 4px 12px rgba(0, 0, 0, .08);
+  --dk-shadow-drop: drop-shadow(0 10px 12px rgba(0, 0, 0, .12));
+  --dk-inset-hi: inset 0 1px 1px rgba(255, 255, 255, .8);
+  --dk-emboss: 0 2px 2px rgba(255, 255, 255, .8);
+  --dk-emboss-sm: 0 1px 1px rgba(255, 255, 255, .8);
+
+  --dk-ease-spring: cubic-bezier(.2, .9, .25, 1);
+  --dk-ease-out: cubic-bezier(.22, 1, .36, 1);
+
+  --dk-space-1: 4px;  --dk-space-2: 8px;  --dk-space-3: 12px; --dk-space-4: 16px;
+  --dk-space-5: 24px; --dk-space-6: 32px; --dk-space-7: 48px; --dk-space-8: 64px; --dk-space-9: 128px;
+
+  interpolate-size: allow-keywords;
+}
+
+/* ───────────────────────── base ───────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+/* custom prop inherits as "-0.03em", so each element tracks relative to its own size */
+:where(*) { letter-spacing: var(--dk-ls); }
+html { background: var(--dk-bg); }
+body {
+  margin: 0;
+  font: 400 16px/1.5 var(--dk-font-sans);
+  color: var(--dk-ink);
+  background: var(--dk-bg);
+  -webkit-font-smoothing: antialiased;
+}
+:where(h1, h2, h3, h4, p) { margin: 0; }
+:where(a, button, summary, input):focus-visible { outline: 2px solid var(--dk-focus); outline-offset: 2px; }
+img, video { display: block; max-width: 100%; }
+
+/* ───────────────────────── type ───────────────────────── */
+.dk-display { font-size: clamp(56px, 9vw, 88px); line-height: 1.1; font-weight: 500; }
+.dk-title   { font-size: clamp(34px, 5vw, 56px); line-height: 1.2; font-weight: 500; text-wrap: balance; }
+.dk-heading { font-size: 20px; line-height: 1.5; font-weight: 500; }
+.dk-lead    { font-size: 20px; line-height: 1.5; text-wrap: pretty; }
+.dk-text    { font-size: 16px; line-height: 1.5; }
+.dk-small   { font-size: 14px; line-height: 1.4; }
+.dk-caption { font-size: 12px; line-height: 1.35; color: var(--dk-ink-4); text-shadow: var(--dk-emboss-sm); }
+.dk-price   { font-size: 56px; line-height: 1; font-weight: 500; text-shadow: 0 3px 3px rgba(255, 255, 255, .8); }
+.dk-muted   { color: var(--dk-ink-2); }
+.dk-faint   { color: var(--dk-ink-3); }
+.dk-lower   { text-transform: lowercase; }
+.dk-mono    { font-family: var(--dk-font-mono); --dk-ls: 0; }
+.dk-serif   { font-family: var(--dk-font-serif); font-style: italic; font-weight: 400; --dk-ls: -0.01em; }
+.dk-ink     { color: var(--dk-ink); background: var(--dk-highlight); border-radius: 2px; padding: 1px 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+
+/* ───────────────────────── layout ───────────────────────── */
+.dk-container { width: min(1090px, 100% - 32px); margin-inline: auto; }
+.dk-section { display: flex; flex-direction: column; align-items: center; gap: var(--dk-space-8); padding: var(--dk-space-9) 16px; }
+.dk-section__head { display: flex; flex-direction: column; align-items: center; gap: var(--dk-space-3); text-align: center; }
+.dk-section__head > .dk-lead, .dk-section__head > .dk-text { max-width: 520px; color: var(--dk-ink-3); }
+.dk-dotgrid { background-image: radial-gradient(var(--dk-dot) 1px, transparent 1.3px); background-size: 34px 34px; }
+.dk-divider { border: 0; border-top: 2px dotted var(--dk-line-dotted); margin: 0; }
+.dk-sky { background: var(--dk-sky); border-radius: var(--dk-radius-lg); color: #fff; }
+@media (max-width: 720px) { .dk-section { padding: 80px 16px; gap: var(--dk-space-7); } }
+
+/* ───────────────────────── menubar ───────────────────────── */
+.dk-menubar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 20px;
+  height: 52px; padding: 0 24px;
+  background: var(--dk-bg); border-bottom: 1px solid var(--dk-line);
+}
+.dk-menubar__left, .dk-menubar__right { flex: 1; display: flex; align-items: center; gap: 16px; }
+.dk-menubar__right { justify-content: flex-end; }
+.dk-menubar a { font-size: 14px; line-height: 1; color: rgba(0, 0, 0, .55); text-decoration: none; transition: color .15s; }
+.dk-menubar a:hover, .dk-menubar a[aria-current] { color: var(--dk-ink); }
+.dk-menubar a:active { transform: scale(.97); }
+.dk-menubar .dk-menubar__brand { color: var(--dk-ink); font-weight: 500; }
+.dk-menubar .dk-menubar__cta { color: var(--dk-accent); font-weight: 500; }
+.dk-menubar__time { font-size: 14px; color: var(--dk-ink-5); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .dk-menubar { padding: 0 16px; }
+  .dk-menubar__left a:not(.dk-menubar__brand), .dk-menubar__time { display: none; }
+}
+
+/* ───────────────────────── glossy pills ─────────────────────────
+   One surface, four shapes: .dk-btn .dk-pill .dk-badge .dk-label (or bare .dk-gloss).
+   Color with .dk-blue .dk-orange .dk-teal .dk-green (silver is default). */
+.dk-gloss, .dk-btn, .dk-pill, .dk-badge, .dk-label {
+  --_fill: var(--dk-silver);
+  --_edge: var(--dk-silver-edge);
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  color: var(--dk-ink); background: var(--_fill);
+  border: 1px solid var(--_edge); border-radius: var(--dk-radius-pill);
+  text-shadow: var(--dk-emboss); white-space: nowrap; text-decoration: none;
+  box-shadow: var(--dk-shadow-float),
+              inset 0 -15px 2px -12px rgba(255, 255, 255, .25),
+              inset 0 -8px 8px -6px rgba(0, 0, 0, .12);
+}
+/* the glossy highlight capsule (replaces the source's btn-gloss.png) */
+.dk-gloss::before, .dk-btn::before, .dk-pill::before, .dk-badge::before, .dk-label::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  top: 2px; left: 10px; right: 10px; height: min(12px, 42%);
+  border-radius: var(--dk-radius-pill);
+  background: linear-gradient(rgba(255, 255, 255, .95), rgba(255, 255, 255, .1));
+}
+.dk-blue   { --_fill: var(--dk-blue);   --_edge: var(--dk-blue-edge); }
+.dk-orange { --_fill: var(--dk-orange); --_edge: var(--dk-orange-edge); }
+.dk-teal   { --_fill: var(--dk-teal);   --_edge: var(--dk-teal-edge); }
+.dk-green  { --_fill: var(--dk-green);  --_edge: var(--dk-green-edge); }
+
+.dk-btn {
+  height: 40px; padding: 0 20px 1px;
+  font: 500 18px/1 var(--dk-font-sans);
+  cursor: pointer; user-select: none;
+  transition: transform .12s, opacity .15s;
+}
+.dk-btn:hover { opacity: .8; }
+.dk-btn:active { transform: scale(.97); }
+.dk-btn svg { width: 18px; height: 18px; flex: none; }
+.dk-btn--sm { height: 32px; padding: 0 14px 1px; font-size: 16px; }
+.dk-btn-stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+.dk-pill  { min-height: 37px; padding: 5px 20px 6px; font-size: 24px; line-height: 1.2; border-radius: 22px; white-space: normal; text-align: left; }
+.dk-badge { height: 24px; padding: 0 10px 1px; font-size: 14px; font-weight: 500; filter: var(--dk-shadow-drop); box-shadow: none; }
+.dk-label { height: 28px; padding: 0 12px 1px; font-size: 12px; font-weight: 500; text-transform: uppercase; color: var(--dk-ink-3); --_edge: rgba(0, 0, 0, .3); box-shadow: none; }
+
+.dk-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: var(--dk-radius-pill); font-size: 13px; font-weight: 500; color: var(--dk-success); background: var(--dk-success-bg); }
+
+/* frosted "liquid glass" — for controls over imagery */
+.dk-glass {
+  --_fill: var(--dk-glass); --_edge: var(--dk-silver-edge);
+  background: var(--_fill); backdrop-filter: var(--dk-glass-blur); -webkit-backdrop-filter: var(--dk-glass-blur);
+  color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+
+/* ───────────────────────── window ───────────────────────── */
+.dk-window {
+  position: relative; display: flex; flex-direction: column;
+  padding: 8px 4px 4px; border: 1px solid transparent; border-radius: var(--dk-radius);
+  background: var(--dk-chrome) padding-box, var(--dk-chrome-edge) border-box;
+  filter: var(--dk-shadow-drop);
+}
+.dk-window::after { content: ""; position: absolute; inset: -.5px; border-radius: inherit; pointer-events: none; box-shadow: var(--dk-inset-hi); }
+.dk-window__bar { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 20px; padding: 0 4px 8px; }
+.dk-window__title {
+  position: absolute; left: 50%; top: -1px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; line-height: 14px; color: var(--dk-ink-4); text-shadow: var(--dk-emboss-sm); white-space: nowrap;
+}
+.dk-window__screen { position: relative; overflow: hidden; border-radius: var(--dk-radius-sm); background: #e9e8ea; }
+.dk-window__screen > img, .dk-window__screen > video { width: 100%; height: 100%; object-fit: cover; }
+.dk-window__body { border-radius: var(--dk-radius-sm); background: var(--dk-surface); color: var(--dk-ink); padding: 24px; }
+.dk-window__badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); z-index: 2; }
+.dk-window-wrap { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+
+/* traffic lights: <span class="dk-lights"><i></i><i></i><i></i></span> */
+.dk-lights { display: flex; align-items: center; gap: 5px; }
+.dk-lights i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 .5px rgba(0, 0, 0, .3); }
+.dk-lights i:nth-child(1) { background: radial-gradient(circle at 50% 30%, #ff8a84, #ff5f57 60%); }
+.dk-lights i:nth-child(2) { background: radial-gradient(circle at 50% 30%, #ffd77a, #febc2e 60%); }
+.dk-lights i:nth-child(3) { background: radial-gradient(circle at 50% 30%, #6ee27f, #28c840 60%); }
+.dk-lights--sm i { width: 10px; height: 10px; }
+
+/* glass window (pricing cards); the gradient hairline is a masked ring so it doesn't bleed through */
+.dk-window--glass {
+  background: var(--dk-glass); filter: none;
+  backdrop-filter: var(--dk-glass-blur); -webkit-backdrop-filter: var(--dk-glass-blur);
+  box-shadow: var(--dk-shadow-float), var(--dk-inset-hi), inset 0 0 0 1px rgba(255, 255, 255, .25);
+}
+.dk-window--glass.dk-window--featured { background: linear-gradient(rgba(15, 127, 255, .6), rgba(15, 127, 255, 0) 40%), var(--dk-glass); }
+.dk-window--glass .dk-window__body { background: linear-gradient(#fff 25%, rgba(255, 255, 255, 0)); }
+
+.dk-window--dark { background: linear-gradient(90deg, #2b2b2d, #3c3c3e 50%, #2b2b2d) padding-box, linear-gradient(#000, #000) border-box; }
+.dk-window--dark::after { box-shadow: inset 0 1px 1px rgba(255, 255, 255, .18); }
+.dk-window--dark .dk-window__title { color: rgba(255, 255, 255, .5); text-shadow: none; }
+
+.dk-terminal { --dk-ls: 0; font: 400 15px/1.6 var(--dk-font-mono); color: #ececec; background: #111; border-radius: var(--dk-radius-sm); padding: 20px 24px; }
+.dk-terminal .dim { color: rgba(255, 255, 255, .45); }
+
+/* ───────────────────────── card ───────────────────────── */
+.dk-card { position: relative; background: var(--dk-surface); border-radius: var(--dk-radius); box-shadow: var(--dk-shadow-card); }
+.dk-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: var(--dk-inset-hi); }
+.dk-card::before, .dk-window--glass::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  padding: 1px; background: var(--dk-chrome-edge);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.dk-window--glass::after { content: none; }
+
+/* ───────────────────────── controls ───────────────────────── */
+.dk-segmented {
+  display: inline-flex; padding: 4px; border-radius: 24px; color: var(--dk-ink-2);
+  background: var(--dk-glass); backdrop-filter: var(--dk-glass-blur); -webkit-backdrop-filter: var(--dk-glass-blur);
+  box-shadow: var(--dk-shadow-float), var(--dk-inset-hi), inset 0 0 0 1px rgba(255, 255, 255, .25);
+}
+.dk-sky .dk-segmented { color: #fff; }
+.dk-seg {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+  font: 400 18px var(--dk-font-sans); color: inherit; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: var(--dk-radius-pill);
+  transition: color .15s;
+}
+.dk-seg[aria-pressed="true"] {
+  color: var(--dk-ink); font-weight: 500; text-shadow: var(--dk-emboss);
+  background: linear-gradient(#fff, #e7e7e7 42%, #fbfbfb) padding-box, var(--dk-chrome-edge) border-box;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .12), var(--dk-inset-hi);
+}
+
+.dk-input {
+  height: 40px; padding: 0 16px; min-width: 0;
+  font: 400 16px var(--dk-font-sans); color: var(--dk-ink);
+  background: var(--dk-surface); border: 1px solid rgba(0, 0, 0, .2); border-radius: var(--dk-radius-pill);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .08);
+}
+.dk-input::placeholder { color: var(--dk-ink-4); }
+
+.dk-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.dk-checklist li { display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 500; line-height: 1.2; text-shadow: var(--dk-emboss); }
+.dk-checklist li::before {
+  content: ""; flex: none; width: 16px; height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8'/%3E%3Cpath d='M4.6 8.3l2.2 2.2 4.6-4.7' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 2px 1px rgba(255, 255, 255, .8));
+}
+
+/* faq: <details class="dk-faq"><summary>q</summary><p>a</p></details> */
+.dk-faq { background: var(--dk-surface); border-radius: var(--dk-radius); padding: 20px; }
+.dk-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; list-style: none; cursor: pointer; font-size: 20px; font-weight: 500; line-height: 1.2; }
+.dk-faq summary::-webkit-details-marker { display: none; }
+.dk-faq summary::after { content: "+"; flex: none; font-size: 24px; font-weight: 300; line-height: 20px; transition: transform .25s var(--dk-ease-out); }
+.dk-faq[open] summary::after { transform: rotate(45deg); }
+.dk-faq p { margin-top: 8px; max-width: 480px; color: var(--dk-ink-3); }
+.dk-faq::details-content { height: 0; overflow: clip; transition: height .3s var(--dk-ease-out), content-visibility .3s allow-discrete; }
+.dk-faq[open]::details-content { height: auto; }
+
+/* ───────────────────────── decoration ───────────────────────── */
+/* scatter windows/stickers around a hero: parent gets position:relative */
+.dk-float { position: absolute; left: var(--x, 0); top: var(--y, 0); transform: rotate(var(--tilt, 0deg)); animation: dk-bob 6s ease-in-out infinite; animation-delay: var(--delay, 0s); }
+.dk-sticker { display: inline-block; transform: rotate(var(--tilt, -6deg)); border-radius: 6px; box-shadow: 0 6px 16px rgba(0, 0, 0, .12); }
+@keyframes dk-bob { 50% { translate: 0 -6px; } }
+@media (max-width: 900px) { .dk-float { display: none; } }
+
+/* ───────────────────────── footer ───────────────────────── */
+.dk-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 32px; }
+.dk-footer h4 { margin: 0 0 12px; font-size: 16px; font-weight: 400; }
+.dk-footer a, .dk-footer p { display: block; width: fit-content; margin-bottom: 12px; color: var(--dk-ink-2); text-decoration: none; transition: color .15s; }
+.dk-footer a:hover { color: var(--dk-ink); }
+.dk-footer__copy { font-size: 12px; color: rgba(0, 0, 0, .45); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dk-float { animation: none; }
+  .dk-btn, .dk-faq::details-content, .dk-faq summary::after { transition: none; }
+}
