@@ -18,6 +18,7 @@ type Profile = {
   country: string;
   location: string | null;
   remote_only: boolean;
+  paused: boolean;
   summary: string | null;
   skills: string[];
   seniority: string | null;
@@ -53,13 +54,17 @@ function SearchNow({ profile, searching, onClick }: { profile: Profile; searchin
   const ready = canMatch(profile);
   const label = searching
     ? "searching…"
-    : !ready
+    : !profile.target_title
+      ? "save a search first"
+      : profile.paused
+      ? "search paused"
+      : !ready
       ? "upload your resume first"
       : next
       ? `search again at ${new Date(next).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).toLowerCase()}`
       : "search now";
   return (
-    <button className="dk-btn dk-btn--sm dk-blue" onClick={onClick} disabled={searching || !ready || !!next || !profile.target_title}>
+    <button className="dk-btn dk-btn--sm dk-blue" onClick={onClick} disabled={searching || !ready || !!next || !profile.target_title || profile.paused}>
       {label}
     </button>
   );
@@ -199,6 +204,28 @@ export default function Dashboard({ session }: { session: Session }) {
     load();
   }
 
+  async function setPaused(paused: boolean) {
+    const { error } = await supabase.from("profiles").update({ paused }).eq("id", session.user.id);
+    setStatus(
+      error
+        ? error.message
+        : paused
+          ? "search paused: no scans or match emails until you resume it."
+          : "search resumed. the next scan picks it up.",
+    );
+    load();
+  }
+
+  async function deleteSearch() {
+    if (!confirm("delete this search? scans and match emails stop. your past matches stay.")) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ target_title: null, location: null, remote_only: false, paused: false })
+      .eq("id", session.user.id);
+    setStatus(error ? error.message : "search deleted. save a new one any time.");
+    load();
+  }
+
   async function saveSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -296,6 +323,19 @@ export default function Dashboard({ session }: { session: Session }) {
             </label>
             <button className="dk-btn">save search</button>
           </form>
+          {profile.target_title && (
+            <>
+              {profile.paused && (
+                <p className="dk-small dk-muted">this search is paused: no scans or match emails.</p>
+              )}
+              <div className="search-actions">
+                <button className="dk-btn dk-btn--sm" onClick={() => setPaused(!profile.paused)}>
+                  {profile.paused ? "resume search" : "pause search"}
+                </button>
+                <button className="linklike" onClick={deleteSearch}>delete search</button>
+              </div>
+            </>
+          )}
         </Window>
       </div>
 

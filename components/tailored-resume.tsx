@@ -14,6 +14,21 @@ type Row = {
 
 export default function TailoredResume({ id }: { id: string }) {
   const [row, setRow] = useState<Row | null>();
+  const [downloading, setDownloading] = useState(false);
+
+  async function download() {
+    setDownloading(true);
+    const { data } = await supabase.auth.getSession();
+    const res = await fetch(`/api/tailor/${id}/pdf`, {
+      headers: { Authorization: `Bearer ${data.session?.access_token}` },
+    });
+    setDownloading(false);
+    if (!res.ok) return alert("couldn't make the pdf, try again.");
+    const file = res.headers.get("content-disposition")?.match(/filename="(.+)"/)?.[1] ?? "resume.pdf";
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(await res.blob()), download: file });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   useEffect(() => {
     supabase
@@ -25,7 +40,7 @@ export default function TailoredResume({ id }: { id: string }) {
   }, [id]);
 
   const nav = (
-    <nav className="dk-menubar no-print">
+    <nav className="dk-menubar">
       <div className="dk-menubar__left">
         <Link className="dk-menubar__brand" href="/">glassing</Link>
       </div>
@@ -45,7 +60,7 @@ export default function TailoredResume({ id }: { id: string }) {
     <>
       {nav}
       <main className="dk-container board tailor">
-        <section className="dk-window no-print">
+        <section className="dk-window">
           <div className="dk-window__bar">
             <span className="dk-lights"><i /><i /><i /></span>
             <h2 className="dk-window__title">tailored for {row.jobs.title.toLowerCase()}</h2>
@@ -67,7 +82,9 @@ export default function TailoredResume({ id }: { id: string }) {
                 {row.unverified_numbers.join(", ")}
               </p>
             )}
-            <button className="dk-btn dk-blue" onClick={() => window.print()}>save as pdf</button>
+            <button className="dk-btn dk-blue" onClick={download} disabled={downloading}>
+              {downloading ? "making pdf…" : "download pdf"}
+            </button>
           </div>
         </section>
 

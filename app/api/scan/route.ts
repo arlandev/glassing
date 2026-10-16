@@ -22,15 +22,22 @@ export async function GET(req: Request) {
   }
   const db = admin();
 
-  const { data, error } = await db.from("profiles").select(SEARCH_PROFILE_COLUMNS).not("target_title", "is", null);
+  const { data, error } = await db
+    .from("profiles")
+    .select(SEARCH_PROFILE_COLUMNS)
+    .not("target_title", "is", null)
+    .eq("paused", false);
   if (error) throw error;
   const { searches, failedSearches } = await runSearches(db, data as SearchProfile[]);
 
   // Email every unsent match, including any left over from a send that failed on the last run.
+  // Paused or deleted searches get no email; their unsent matches wait (and still show on the dashboard).
   const pending = await db
     .from("matches")
-    .select("user_id, job_id, score, ai_score, ai_note, profiles(email, target_title, country), jobs(title, company, location, url)")
+    .select("user_id, job_id, score, ai_score, ai_note, profiles!inner(email, target_title, country), jobs(title, company, location, url)")
     .is("notified_at", null)
+    .eq("profiles.paused", false)
+    .not("profiles.target_title", "is", null)
     .order("score", { ascending: false });
   if (pending.error) throw pending.error;
 

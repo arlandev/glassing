@@ -14,11 +14,12 @@ export async function POST(req: Request) {
   // Claim this window's search in one update, so a double click can't run two.
   const previous = await db
     .from("profiles")
-    .select("mode, skills, target_title, last_manual_scan_at")
+    .select("mode, skills, target_title, paused, last_manual_scan_at")
     .eq("id", user.id)
     .single();
   if (previous.error) throw previous.error;
   if (!previous.data.target_title) return Response.json({ error: "save a target job title first" }, { status: 400 });
+  if (previous.data.paused) return Response.json({ error: "your search is paused. resume it to search." }, { status: 400 });
   if (!canMatch(previous.data)) {
     return Response.json({ error: "upload your resume first, or switch to job title only" }, { status: 400 });
   }
