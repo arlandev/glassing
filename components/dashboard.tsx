@@ -258,8 +258,8 @@ export default function Dashboard({ session }: { session: Session }) {
         <SearchNow profile={profile} searching={searching} onClick={searchNow} />
         {matches.length ? (
           <ul className="matches">
-            {matches.map((m) => (
-              <li key={m.jobs.id}>
+            {matches.map((m, i) => (
+              <li key={m.jobs.id} style={{ "--i": i } as React.CSSProperties}>
                 <span className={`dk-badge ${m.score >= 80 ? "dk-green" : "dk-blue"}`}>{m.score}</span>
                 <div className="grow">
                   <a href={m.jobs.url} target="_blank" rel="noreferrer" className="dk-lower">{m.jobs.title}</a>

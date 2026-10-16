@@ -55,3 +55,32 @@ select.dk-input {
 .tip:hover::after, .tip:focus-visible::after { opacity: 1; }
 
 .modes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--dk-space-3); }
+
+/* ───────── motion (timings and curves follow heyclicky.com) ─────────
+   Things rise 8px and fade in on mount, staggered; small marks pop with a little overshoot;
+   anything you press dips to 97%. */
+@keyframes gl-in { from { opacity: 0; translate: 0 8px; } }
+@keyframes gl-pop { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes gl-badge { from { opacity: 0; scale: .6; } }
+
+.hero > *, .board > :not(.board__top), .board__top > * { animation: gl-in .45s ease-out var(--d, 0s) backwards; }
+.hero > :nth-child(2), .board > :nth-child(2), .board__top > :nth-child(2) { --d: .08s; }
+.board > :nth-child(3) { --d: .16s; }
+.board > :nth-child(4) { --d: .24s; }
+
+/* match rows cascade in (capped so a long list doesn't crawl), then their score pops */
+.matches li { animation: gl-in .4s cubic-bezier(.22, 1, .36, 1) calc(.2s + min(var(--i, 0), 12) * 35ms) backwards; }
+.matches li .dk-badge { animation: gl-badge .5s cubic-bezier(.34, 1.56, .64, 1) calc(.3s + min(var(--i, 0), 12) * 35ms) backwards; }
+
+.modes .tip { animation: gl-pop .22s cubic-bezier(.2, .7, .25, 1) backwards; }
+.tip::after { translate: 0 4px; transition: opacity .18s, translate .18s; }
+.tip:hover::after, .tip:focus-visible::after { translate: 0; }
+
+.chips button.dk-badge, .dk-seg, .linklike { transition: transform .12s, opacity .15s, color .15s; }
+.chips button.dk-badge:active, .dk-seg:active, .linklike:active { transform: scale(.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero > *, .board > :not(.board__top), .board__top > *, .matches li, .matches li .dk-badge, .modes .tip { animation: none; }
+  .tip::after { translate: none; transition: opacity .18s; }
+  .chips button.dk-badge:active, .dk-seg:active, .linklike:active { transform: none; }
+}
