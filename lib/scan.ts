@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchJobs } from "@/lib/jsearch";
 import { type RateJob, type RateProfile, rateNewMatches } from "@/lib/rate";
 import { MIN_SCORE, canMatch, scoreJob } from "@/lib/score";
+import { matchKey } from "@/lib/text";
 
 export const SEARCH_PROFILE_COLUMNS =
   "id, mode, target_title, country, location, remote_only, skills, seniority, summary, years_experience";
@@ -43,19 +44,27 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
     }
     if (!jobs.length) continue;
 
+    // shortcut: unstable JSearch ids mean a repeat posting adds a new (unmatched) jobs row each run; prune old jobs rows if the table gets big.
     const saved = await db.from("jobs").upsert(jobs, { onConflict: "id", ignoreDuplicates: true });
     if (saved.error) throw saved.error;
 
     const matches = users.flatMap((u) =>
       jobs
-        .map((j) => ({ user_id: u.id, job_id: j.id, score: scoreJob(u, j), notified_at: notifiedAt }))
+        .map((j) => ({
+          user_id: u.id,
+          job_id: j.id,
+          dedupe_key: matchKey(j.title, j.company),
+          score: scoreJob(u, j),
+          notified_at: notifiedAt,
+        }))
         .filter((m) => m.score >= MIN_SCORE),
     );
     if (!matches.length) continue;
-    // Matches a user already has are skipped, so a listing is never sent to the same person twice.
+    // A posting a user already has (same title + company, whatever job_id JSearch gave it this time) is skipped,
+    // so a listing is never sent to the same person twice.
     const matched = await db
       .from("matches")
-      .upsert(matches, { onConflict: "user_id,job_id", ignoreDuplicates: true })
+      .upsert(matches, { onConflict: "user_id,dedupe_key", ignoreDuplicates: true })
       .select("user_id, job_id, score");
     if (matched.error) throw matched.error;
     newMatches += matched.data.length;

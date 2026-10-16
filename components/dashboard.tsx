@@ -9,6 +9,7 @@ import { COUNTRIES } from "@/lib/countries";
 import { canMatch } from "@/lib/score";
 import { supabase } from "@/lib/supabase";
 import { NEEDS_RESUME, TAILOR_PER_DAY, TAILOR_PER_MONTH } from "@/lib/tailor";
+import { iconUrl, sourceHost } from "@/lib/text";
 
 type Mode = "resume" | "title";
 
@@ -95,6 +96,25 @@ function ModePicker({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => 
 }
 
 type Tailoring = { id: string; job_id: string; created_at: string };
+
+// The job board's own favicon next to a listing; hidden if the board has none.
+function SourceIcon({ url }: { url: string }) {
+  const host = sourceHost(url);
+  if (!host) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- a 14px remote favicon, nothing for next/image to optimize
+    <img
+      className="src-icon"
+      src={iconUrl(host)}
+      alt={host}
+      title={`from ${host}`}
+      width={14}
+      height={14}
+      loading="lazy"
+      onError={(e) => (e.currentTarget.style.display = "none")}
+    />
+  );
+}
 
 // The feed shows matches from the last 30 days (postings go stale), 50 at a time.
 const FEED_DAYS = 30;
@@ -361,6 +381,7 @@ export default function Dashboard({ session }: { session: Session }) {
               <li key={m.jobs.id} style={{ "--i": i } as React.CSSProperties}>
                 <span className={`dk-badge ${m.score >= 80 ? "dk-green" : "dk-blue"}`}>{m.score}</span>
                 <div className="grow">
+                  <SourceIcon url={m.jobs.url} />
                   <a href={m.jobs.url} target="_blank" rel="noreferrer" className="dk-lower">{m.jobs.title}</a>
                   <p className="dk-small dk-muted dk-lower">
                     {[m.jobs.company, m.jobs.location, m.jobs.is_remote && "remote"].filter(Boolean).join(" · ")}

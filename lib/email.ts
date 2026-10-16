@@ -1,4 +1,5 @@
 import { COUNTRIES } from "./countries.ts";
+import { iconUrl, sourceHost } from "./text.ts";
 
 type MatchLine = {
   title: string;
@@ -34,7 +35,7 @@ export function renderMatchesEmail(search: Search, jobs: MatchLine[], appUrl: st
     "",
     ...jobs.flatMap((j) => [
       `${j.score}  ${j.title.toLowerCase()}`,
-      `    ${[j.company, j.location].filter(Boolean).join(" · ").toLowerCase()}`,
+      `    ${[j.company, j.location, sourceHost(j.url) && `via ${sourceHost(j.url)}`].filter(Boolean).join(" · ").toLowerCase()}`,
       ...(j.ai_score ? [`    ai ${j.ai_score}/5 · ${j.ai_note ?? ""}`] : []),
       `    ${j.url}`,
       "",
@@ -51,8 +52,12 @@ export function renderMatchesEmail(search: Search, jobs: MatchLine[], appUrl: st
             <span style="${j.score >= 80 ? GREEN : BLUE}display:inline-block;border-radius:999px;padding:2px 10px;${FONT}font-size:13px;font-weight:500;color:#000;">${j.score}</span>
           </td>
           <td valign="top" style="${FONT}">
-            <a href="${esc(j.url)}" style="color:#000;font-size:16px;font-weight:500;text-decoration:none;">${esc(j.title.toLowerCase())}</a>
-            <div style="font-size:14px;color:#666666;padding-top:2px;">${esc([j.company, j.location].filter(Boolean).join(" · ").toLowerCase())}</div>${
+            ${
+              sourceHost(j.url)
+                ? `<img src="${esc(iconUrl(sourceHost(j.url)!))}" width="14" height="14" alt="" style="vertical-align:-2px;margin-right:6px;border:0;border-radius:3px;">`
+                : ""
+            }<a href="${esc(j.url)}" style="color:#000;font-size:16px;font-weight:500;text-decoration:none;">${esc(j.title.toLowerCase())}</a>
+            <div style="font-size:14px;color:#666666;padding-top:2px;">${esc([j.company, j.location, sourceHost(j.url) && `via ${sourceHost(j.url)}`].filter(Boolean).join(" · ").toLowerCase())}</div>${
               j.ai_score
                 ? `<div style="font-size:13px;color:#0f9d3a;padding-top:4px;">ai ${j.ai_score}/5 · ${esc(j.ai_note ?? "")}</div>`
                 : ""
