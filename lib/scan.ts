@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchJobs } from "@/lib/jsearch";
+import { type RateJob, type RateProfile, rateNewMatches } from "@/lib/rate";
 import { MIN_SCORE, canMatch, scoreJob } from "@/lib/score";
 
-export const SEARCH_PROFILE_COLUMNS = "id, mode, target_title, country, location, remote_only, skills, seniority";
+export const SEARCH_PROFILE_COLUMNS =
+  "id, mode, target_title, country, location, remote_only, skills, seniority, summary, years_experience";
 
 export type SearchProfile = {
   id: string;
@@ -13,6 +15,8 @@ export type SearchProfile = {
   remote_only: boolean;
   skills: string[];
   seniority: string | null;
+  summary: string | null;
+  years_experience: number | null;
 };
 
 // Searches JSearch for these profiles and saves new matches. Users with the same search share one request.
@@ -26,6 +30,7 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
 
   let failedSearches = 0;
   let newMatches = 0;
+  const toRate: { profile: RateProfile; job: RateJob; score: number }[] = [];
   for (const users of searches.values()) {
     const { target_title, country, location, remote_only } = users[0];
     let jobs;
@@ -51,10 +56,18 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
     const matched = await db
       .from("matches")
       .upsert(matches, { onConflict: "user_id,job_id", ignoreDuplicates: true })
-      .select("job_id");
+      .select("user_id, job_id, score");
     if (matched.error) throw matched.error;
     newMatches += matched.data.length;
+
+    // Resume-mode users get an AI second opinion on their best new matches (title-only has no resume to compare).
+    for (const m of matched.data) {
+      const profile = users.find((u) => u.id === m.user_id);
+      const job = jobs.find((j) => j.id === m.job_id);
+      if (profile?.mode === "resume" && job) toRate.push({ profile, job, score: m.score });
+    }
   }
 
+  await rateNewMatches(db, toRate);
   return { searches: searches.size, failedSearches, newMatches };
 }

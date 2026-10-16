@@ -11,7 +11,7 @@ export const RESUME_SYSTEM_PROMPT = `You extract a structured candidate profile 
 
 <is_resume>
 Set to true only if the document is a resume or CV: one person's work history, education or skills.
-Set to false for anything else: a cover letter alone, a job description, a portfolio with no work history, an invoice, a form, or a blank or unreadable file. When false, return summary "", skills [], seniority "junior", years_experience 0 and suggested_titles [].
+Set to false for anything else: a cover letter alone, a job description, a portfolio with no work history, an invoice, a form, or a blank or unreadable file. When false, return summary "", skills [], seniority "junior", years_experience 0, suggested_titles [] and a resume with every field empty.
 </is_resume>
 
 <summary>
@@ -59,4 +59,13 @@ Exactly 3 job titles to search job boards with, best fit first. Each one is sent
 - Title 1 is normally the person's most recent title, rewritten in its standard form. Titles 2 and 3 are other common names employers use for the same work (e.g. "Frontend Engineer", "React Developer", "UI Engineer").
 - Suggest a different career direction only if the document states an objective toward it.
 - All 3 must be different from each other.
-</suggested_titles>`;
+</suggested_titles>
+
+<resume>
+A faithful transcription of the whole document, used later to tailor it to specific jobs. Copy, do not summarize or improve.
+- name, contact lines (email, phone, city, links) and headline (the most recent job title) exactly as written.
+- summary: the document's own summary or objective, word for word, or "" if it has none.
+- sections: every section in the document's order (experience, education, projects, certifications, awards, ...), heading in lowercase. Each role, school or project is one entry with its title, organisation, dates and location exactly as written ("" when missing) and every bullet word for word, in order. Put paragraph-style descriptions in bullets as they are.
+- skills: the skills exactly as the document lists them, without normalizing them.
+- Never add, merge, reword or drop anything. If text is unreadable, leave it out rather than guess.
+</resume>`;

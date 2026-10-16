@@ -1,7 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { admin, userFrom } from "@/lib/admin";
+import { alertBudgetHit, claude } from "@/lib/ai";
+import { AI_PAUSED, isBudgetError } from "@/lib/budget";
+import { ResumeDoc } from "@/lib/resume-doc";
 import { RESUME_SYSTEM_PROMPT } from "@/lib/resume-prompt";
 
 export const maxDuration = 120;
@@ -16,9 +18,8 @@ const ResumeProfile = z.object({
   seniority: z.enum(["junior", "mid", "senior", "lead"]).describe("see <seniority>"),
   years_experience: z.number().int().describe("see <years_experience>"),
   suggested_titles: z.array(z.string()).describe("see <suggested_titles>"),
+  resume: ResumeDoc.describe("see <resume>"),
 });
-
-const claude = new Anthropic();
 
 export async function POST(req: Request) {
   const user = await userFrom(req);
@@ -30,32 +31,39 @@ export async function POST(req: Request) {
   }
   if (file.size > MAX_BYTES) return Response.json({ error: "pdf must be under 4 mb" }, { status: 413 });
 
-  const res = await claude.messages.parse({
-    model: "claude-haiku-5-5",
-    max_tokens: 16000,
-    // high effort: the recommended level for strict instruction following on Haiku; still a fraction of a cent per resume
-    output_config: { effort: "high", format: zodOutputFormat(ResumeProfile) },
-    system: RESUME_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "document",
-            source: {
-              type: "base64",
-              media_type: "application/pdf",
-              data: Buffer.from(await file.arrayBuffer()).toString("base64"),
+  let res;
+  try {
+    res = await claude.messages.parse({
+      model: "claude-haiku-5-5",
+      max_tokens: 16000,
+      // high effort: the recommended level for strict instruction following on Haiku; still a fraction of a cent per resume
+      output_config: { effort: "high", format: zodOutputFormat(ResumeProfile) },
+      system: RESUME_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "document",
+              source: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: Buffer.from(await file.arrayBuffer()).toString("base64"),
+              },
             },
-          },
-          {
-            type: "text",
-            text: `Today's date is ${new Date().toISOString().slice(0, 10)}. Extract the profile from this document, following every rule in the system prompt.`,
-          },
-        ],
-      },
-    ],
-  });
+            {
+              type: "text",
+              text: `Today's date is ${new Date().toISOString().slice(0, 10)}. Extract the profile from this document, following every rule in the system prompt.`,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (e) {
+    if (!isBudgetError(e)) throw e;
+    await alertBudgetHit("resume upload");
+    return Response.json({ error: AI_PAUSED }, { status: 503 });
+  }
 
   const out = res.parsed_output;
   if (res.stop_reason === "refusal" || !out) {
@@ -70,6 +78,7 @@ export async function POST(req: Request) {
     seniority: out.seniority,
     years_experience: Math.min(Math.max(out.years_experience, 0), 60),
     suggested_titles: [...new Set(out.suggested_titles.map((t) => t.trim()).filter(Boolean))].slice(0, 3),
+    resume: out.resume,
   };
 
   const db = admin();
@@ -88,5 +97,5 @@ export async function POST(req: Request) {
     if (titled.error) throw titled.error;
   }
 
-  return Response.json(profile);
+  return Response.json({ ...profile, resume: undefined }); // the transcript stays server-side
 }

@@ -9,6 +9,8 @@ type Pending = {
   job_id: string;
   score: number;
   profiles: { email: string; target_title: string; country: string };
+  ai_score: number | null;
+  ai_note: string | null;
   jobs: { title: string; company: string | null; location: string | null; url: string };
 };
 
@@ -27,7 +29,7 @@ export async function GET(req: Request) {
   // Email every unsent match, including any left over from a send that failed on the last run.
   const pending = await db
     .from("matches")
-    .select("user_id, job_id, score, profiles(email, target_title, country), jobs(title, company, location, url)")
+    .select("user_id, job_id, score, ai_score, ai_note, profiles(email, target_title, country), jobs(title, company, location, url)")
     .is("notified_at", null)
     .order("score", { ascending: false });
   if (pending.error) throw pending.error;
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
   for (const [userId, rows] of byUser) {
     try {
       const { email, target_title, country } = rows[0].profiles;
-      await sendMatches(email, { title: target_title, country }, rows.map((r) => ({ ...r.jobs, score: r.score })));
+      await sendMatches(email, { title: target_title, country }, rows.map((r) => ({ ...r.jobs, score: r.score, ai_score: r.ai_score, ai_note: r.ai_note })));
     } catch (e) {
       console.error(e); // left unsent, retried next run
       continue;

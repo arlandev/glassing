@@ -1,6 +1,14 @@
 import { COUNTRIES } from "./countries.ts";
 
-type MatchLine = { title: string; company: string | null; location: string | null; url: string; score: number };
+type MatchLine = {
+  title: string;
+  company: string | null;
+  location: string | null;
+  url: string;
+  score: number;
+  ai_score?: number | null;
+  ai_note?: string | null;
+};
 type Search = { title: string; country: string };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -27,6 +35,7 @@ export function renderMatchesEmail(search: Search, jobs: MatchLine[], appUrl: st
     ...jobs.flatMap((j) => [
       `${j.score}  ${j.title.toLowerCase()}`,
       `    ${[j.company, j.location].filter(Boolean).join(" · ").toLowerCase()}`,
+      ...(j.ai_score ? [`    ai ${j.ai_score}/5 · ${j.ai_note ?? ""}`] : []),
       `    ${j.url}`,
       "",
     ]),
@@ -43,7 +52,11 @@ export function renderMatchesEmail(search: Search, jobs: MatchLine[], appUrl: st
           </td>
           <td valign="top" style="${FONT}">
             <a href="${esc(j.url)}" style="color:#000;font-size:16px;font-weight:500;text-decoration:none;">${esc(j.title.toLowerCase())}</a>
-            <div style="font-size:14px;color:#666666;padding-top:2px;">${esc([j.company, j.location].filter(Boolean).join(" · ").toLowerCase())}</div>
+            <div style="font-size:14px;color:#666666;padding-top:2px;">${esc([j.company, j.location].filter(Boolean).join(" · ").toLowerCase())}</div>${
+              j.ai_score
+                ? `<div style="font-size:13px;color:#0f9d3a;padding-top:4px;">ai ${j.ai_score}/5 · ${esc(j.ai_note ?? "")}</div>`
+                : ""
+            }
           </td>
         </tr></table>
       </td></tr>`,
@@ -81,12 +94,16 @@ export function renderMatchesEmail(search: Search, jobs: MatchLine[], appUrl: st
   return { subject, html, text };
 }
 
-export async function sendMatches(to: string, search: Search, jobs: MatchLine[]) {
-  const { subject, html, text } = renderMatchesEmail(search, jobs, process.env.APP_URL ?? "");
+export async function sendEmail(to: string, subject: string, text: string, html?: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, html, text }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, text, html }),
   });
   if (!res.ok) throw new Error(`resend ${res.status}: ${await res.text()}`);
+}
+
+export async function sendMatches(to: string, search: Search, jobs: MatchLine[]) {
+  const { subject, html, text } = renderMatchesEmail(search, jobs, process.env.APP_URL ?? "");
+  await sendEmail(to, subject, text, html);
 }

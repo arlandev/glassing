@@ -1,11 +1,14 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from "react";
 import { nextSearchAt } from "@/lib/cooldown";
 import { COUNTRIES } from "@/lib/countries";
 import { canMatch } from "@/lib/score";
 import { supabase } from "@/lib/supabase";
+import { NEEDS_RESUME, TAILOR_PER_DAY, TAILOR_PER_MONTH } from "@/lib/tailor";
 
 type Mode = "resume" | "title";
 
@@ -21,10 +24,13 @@ type Profile = {
   years_experience: number | null;
   last_manual_scan_at: string | null;
   suggested_titles: string[];
+  resume: unknown; // the transcript tailoring rewrites; null until a resume is (re-)uploaded
 };
 
 type Match = {
   score: number;
+  ai_score: number | null;
+  ai_note: string | null;
   created_at: string;
   jobs: { id: string; title: string; company: string | null; location: string | null; is_remote: boolean | null; url: string };
 };
@@ -83,25 +89,41 @@ function ModePicker({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => 
   );
 }
 
+type Tailoring = { id: string; job_id: string; created_at: string };
+
+// Slots used so far, on the same UTC day/month boundaries the server's claim_tailoring uses.
+function tailorUsage(rows: Tailoring[]) {
+  const now = new Date();
+  const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const month = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const at = rows.map((r) => Date.parse(r.created_at));
+  return { today: at.filter((t) => t >= day).length, month: at.filter((t) => t >= month).length };
+}
+
 export default function Dashboard({ session }: { session: Session }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [tailorings, setTailorings] = useState<Tailoring[]>([]);
+  const [tailoring, setTailoring] = useState<string | null>(null);
+  const router = useRouter();
 
   const load = useCallback(async () => {
-    const [p, m] = await Promise.all([
+    const [p, m, t] = await Promise.all([
       supabase.from("profiles").select("*").single(),
       supabase
         .from("matches")
-        .select("score, created_at, jobs(id, title, company, location, is_remote, url)")
+        .select("score, ai_score, ai_note, created_at, jobs(id, title, company, location, is_remote, url)")
         .order("score", { ascending: false })
         .limit(50),
+      supabase.from("tailorings").select("id, job_id, created_at").not("resume", "is", null),
     ]);
-    if (p.error || m.error) return setStatus((p.error ?? m.error)!.message);
+    if (p.error || m.error || t.error) return setStatus((p.error ?? m.error ?? t.error)!.message);
     setProfile(p.data);
     setMatches(m.data as unknown as Match[]); // embedded rows are loosely typed without generated types
+    setTailorings(t.data);
   }, []);
 
   useEffect(() => {
@@ -124,6 +146,24 @@ export default function Dashboard({ session }: { session: Session }) {
     const json = await res.json().catch(() => ({}));
     setStatus(res.ok ? "resume analyzed." : (json.error ?? "upload failed, try again."));
     setBusy(false);
+    load();
+  }
+
+  async function tailor(jobId: string) {
+    if (!profile?.resume) {
+      return setStatus(profile?.summary ? "re-upload your resume once so ai can tailor it to jobs." : NEEDS_RESUME);
+    }
+    setTailoring(jobId);
+    setStatus("tailoring your resume to this job. this takes up to a minute.");
+    const res = await fetch("/api/tailor", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ job_id: jobId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setTailoring(null);
+    if (res.ok) return router.push(`/tailor/${json.id}`);
+    setStatus(json.error ?? "tailoring failed, try again.");
     load();
   }
 
@@ -176,6 +216,8 @@ export default function Dashboard({ session }: { session: Session }) {
   }
 
   if (!profile) return <p className="dk-container board dk-muted" role="status">{status || "loading…"}</p>;
+  const usage = tailorUsage(tailorings);
+  const tailoredFor = new Map(tailorings.map((t) => [t.job_id, t.id]));
 
   return (
     <main className="dk-container board">
@@ -197,6 +239,9 @@ export default function Dashboard({ session }: { session: Session }) {
               </>
             ) : (
               <p className="dk-text dk-muted">upload your resume and we&apos;ll summarize it and pull out your skills.</p>
+            )}
+            {profile.summary && !profile.resume && (
+              <p className="dk-small dk-muted">re-upload your resume once to unlock tailoring it to jobs.</p>
             )}
             <label className="dk-btn dk-blue" aria-disabled={busy}>
               {busy ? "reading…" : profile.summary ? "replace resume" : "upload resume"}
@@ -256,6 +301,12 @@ export default function Dashboard({ session }: { session: Session }) {
 
       <Window title={`matches (${matches.length})`}>
         <SearchNow profile={profile} searching={searching} onClick={searchNow} />
+        {!!profile.resume && (
+          <p className="dk-small dk-muted">
+            tailored resumes left: {TAILOR_PER_DAY - Math.min(usage.today, TAILOR_PER_DAY)} today ·{" "}
+            {TAILOR_PER_MONTH - Math.min(usage.month, TAILOR_PER_MONTH)} this month
+          </p>
+        )}
         {matches.length ? (
           <ul className="matches">
             {matches.map((m, i) => (
@@ -266,10 +317,24 @@ export default function Dashboard({ session }: { session: Session }) {
                   <p className="dk-small dk-muted dk-lower">
                     {[m.jobs.company, m.jobs.location, m.jobs.is_remote && "remote"].filter(Boolean).join(" · ")}
                   </p>
+                  {m.ai_score && (
+                    <p className="dk-small ai-note">
+                      <span className={`dk-tag ${m.ai_score >= 4 ? "" : "meh"}`}>ai {m.ai_score}/5</span> {m.ai_note}
+                    </p>
+                  )}
                 </div>
-                <span className="dk-caption">
-                  {new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric" })}
-                </span>
+                <div className="row-side">
+                  <span className="dk-caption">
+                    {new Date(m.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric" })}
+                  </span>
+                  {tailoredFor.has(m.jobs.id) ? (
+                    <Link className="dk-btn dk-btn--sm" href={`/tailor/${tailoredFor.get(m.jobs.id)}`}>view tailored</Link>
+                  ) : (
+                    <button className="dk-btn dk-btn--sm" disabled={!!tailoring} onClick={() => tailor(m.jobs.id)}>
+                      {tailoring === m.jobs.id ? "tailoring…" : "tailor resume"}
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
