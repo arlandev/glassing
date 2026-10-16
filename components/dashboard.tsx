@@ -96,6 +96,10 @@ function ModePicker({ mode, onChange }: { mode: Mode; onChange: (mode: Mode) => 
 
 type Tailoring = { id: string; job_id: string; created_at: string };
 
+// The feed shows matches from the last 30 days (postings go stale), 50 at a time.
+const FEED_DAYS = 30;
+const PAGE = 50;
+
 // Slots used so far, on the same UTC day/month boundaries the server's claim_tailoring uses.
 function tailorUsage(rows: Tailoring[]) {
   const now = new Date();
@@ -113,6 +117,8 @@ export default function Dashboard({ session }: { session: Session }) {
   const [searching, setSearching] = useState(false);
   const [tailorings, setTailorings] = useState<Tailoring[]>([]);
   const [tailoring, setTailoring] = useState<string | null>(null);
+  const [shown, setShown] = useState(PAGE);
+  const [total, setTotal] = useState(0);
   const router = useRouter();
 
   const load = useCallback(async () => {
@@ -120,16 +126,18 @@ export default function Dashboard({ session }: { session: Session }) {
       supabase.from("profiles").select("*").single(),
       supabase
         .from("matches")
-        .select("score, ai_score, ai_note, created_at, jobs(id, title, company, location, is_remote, url)")
+        .select("score, ai_score, ai_note, created_at, jobs(id, title, company, location, is_remote, url)", { count: "exact" })
+        .gte("created_at", new Date(Date.now() - FEED_DAYS * 864e5).toISOString())
         .order("score", { ascending: false })
-        .limit(50),
+        .range(0, shown - 1),
       supabase.from("tailorings").select("id, job_id, created_at").not("resume", "is", null),
     ]);
     if (p.error || m.error || t.error) return setStatus((p.error ?? m.error ?? t.error)!.message);
     setProfile(p.data);
     setMatches(m.data as unknown as Match[]); // embedded rows are loosely typed without generated types
+    setTotal(m.count ?? m.data.length);
     setTailorings(t.data);
-  }, []);
+  }, [shown]);
 
   useEffect(() => {
     load(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on mount
@@ -339,7 +347,7 @@ export default function Dashboard({ session }: { session: Session }) {
         </Window>
       </div>
 
-      <Window title={`matches (${matches.length})`}>
+      <Window title={`matches (${total})`}>
         <SearchNow profile={profile} searching={searching} onClick={searchNow} />
         {!!profile.resume && (
           <p className="dk-small dk-muted">
@@ -380,6 +388,11 @@ export default function Dashboard({ session }: { session: Session }) {
           </ul>
         ) : (
           <p className="dk-text dk-muted">no matches yet. the scan runs at the top of every hour.</p>
+        )}
+        {matches.length < total && (
+          <button className="dk-btn dk-btn--sm" onClick={() => setShown((n) => n + PAGE)}>
+            show more ({total - matches.length} left)
+          </button>
         )}
       </Window>
     </main>
