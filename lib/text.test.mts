@@ -1,7 +1,7 @@
 // Run with: npm test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { clip, matchKey, sourceHost } from "./text.ts";
+import { clip, matchKey, mentionsRemote, sourceHost } from "./text.ts";
 
 test("the same posting gets the same key however it's spaced or cased", () => {
   assert.equal(matchKey("AI Product Engineer", "HireArchi"), matchKey("  ai  product engineer ", "HIREARCHI"));
@@ -12,6 +12,15 @@ test("the same posting gets the same key however it's spaced or cased", () => {
 test("clip cuts at a word and marks it", () => {
   assert.equal(clip("short note", 50), "short note");
   assert.equal(clip("partial fit: python overlap, but posting centers on .net and react", 40), "partial fit: python overlap, but posting…");
+});
+
+test("a posting that says it's remote counts as remote", () => {
+  assert.ok(mentionsRemote("Data Analyst – Remote (Sales Analytics)"));
+  assert.ok(mentionsRemote("this is a Work From Home role"));
+  assert.ok(mentionsRemote("WFH setup, fully home-based"));
+  assert.ok(!mentionsRemote("Senior Data Analyst, Makati City, onsite"));
+  assert.ok(!mentionsRemote("this is a non-remote role, no remote work"));
+  assert.ok(!mentionsRemote("remoteness")); // whole words only
 });
 
 test("source host keeps the board's domain", () => {

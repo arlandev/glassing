@@ -10,6 +10,11 @@ export function clip(text: string, max: number) {
   return `${text.slice(0, space > 0 ? space : max).replace(/[\s,;:.-]+$/, "")}…`;
 }
 
+// JSearch leaves job_is_remote off in many countries (every Philippine result we checked), even for "Remote ..." titles.
+// shortcut: a description that only says "remote" in passing ("remote monitoring") counts too; check just the title if that gets noisy.
+const REMOTE = /(?<!\b(?:non|not|no)[- ])\b(?:remote|work from home|work-from-home|wfh|home[- ]based|telecommute)\b/i;
+export const mentionsRemote = (text: string) => REMOTE.test(text);
+
 // A job board's favicon. DuckDuckGo's service answers directly for every board we've seen (Google's redirects).
 export const iconUrl = (host: string) => `https://icons.duckduckgo.com/ip3/${host}.ico`;
 
