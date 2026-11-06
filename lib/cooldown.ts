@@ -1,6 +1,6 @@
 // "Search now" allows one manual search per scheduled-scan window: it unlocks again at the next scheduled run.
-// Must match scan-cron's schedule on Railway (0 */4 * * *, UTC).
-const WINDOW_MS = 4 * 60 * 60 * 1000;
+// Must match scan-cron's schedule on Railway (0 */12 * * *, UTC).
+const WINDOW_MS = 12 * 60 * 60 * 1000;
 
 export const windowStart = (now = Date.now()) => Math.floor(now / WINDOW_MS) * WINDOW_MS;
 

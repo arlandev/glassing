@@ -40,7 +40,10 @@ export async function POST(req: Request) {
   if (result.failedSearches) {
     // The provider failed, so give the search back rather than spend the user's turn.
     await db.from("profiles").update({ last_manual_scan_at: previous.data.last_manual_scan_at }).eq("id", user.id);
-    return Response.json({ error: "the job search failed, try again in a minute" }, { status: 502 });
+    const error = result.quotaHit
+      ? "the job search is out of requests for now. scheduled scans pick up again once it resets."
+      : "the job search failed, try again in a minute";
+    return Response.json({ error }, { status: 502 });
   }
   return Response.json({ new_matches: result.newMatches });
 }

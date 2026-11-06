@@ -14,7 +14,7 @@ type Pending = {
   jobs: { title: string; company: string | null; location: string | null; url: string };
 };
 
-// Called every 4 hours by the Railway cron service `scan-cron` (see README).
+// Called every 12 hours by the Railway cron service `scan-cron` (see README).
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     .not("target_title", "is", null)
     .eq("paused", false);
   if (error) throw error;
-  const { searches, failedSearches } = await runSearches(db, data as SearchProfile[]);
+  const { searches, failedSearches, quotaHit } = await runSearches(db, data as SearchProfile[]);
 
   // Email every unsent match, including any left over from a send that failed on the last run.
   // Paused or deleted searches get no email; their unsent matches wait (and still show on the dashboard).
@@ -61,5 +61,5 @@ export async function GET(req: Request) {
     emailed++;
   }
 
-  return Response.json({ searches, failedSearches, emailed });
+  return Response.json({ searches, failedSearches, quotaHit, emailed });
 }

@@ -14,6 +14,9 @@ type JSearchJob = {
   job_posted_at_datetime_utc: string | null;
 };
 
+// Out of RapidAPI requests (monthly quota or rate limit): every other search would fail too.
+export class QuotaError extends Error {}
+
 // Returns the last 3 days' postings for one search, shaped as rows for the jobs table.
 export async function searchJobs(title: string, country: string, location: string | null, remoteOnly: boolean) {
   const params = new URLSearchParams({
@@ -30,6 +33,7 @@ export async function searchJobs(title: string, country: string, location: strin
   const res = await fetch(`https://${HOST}/search-v2?${params}`, {
     headers: { "x-rapidapi-key": process.env.RAPIDAPI_KEY!, "x-rapidapi-host": HOST },
   });
+  if (res.status === 429) throw new QuotaError(`jsearch 429: ${await res.text()}`);
   if (!res.ok) throw new Error(`jsearch ${res.status}: ${await res.text()}`);
 
   const jobs: JSearchJob[] = (await res.json()).data?.jobs ?? [];

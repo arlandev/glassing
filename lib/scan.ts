@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { searchJobs } from "@/lib/jsearch";
+import { QuotaError, searchJobs } from "@/lib/jsearch";
 import { type RateJob, type RateProfile, rateNewMatches } from "@/lib/rate";
 import { MIN_SCORE, canMatch, scoreJob } from "@/lib/score";
 import { matchKey } from "@/lib/text";
@@ -30,6 +30,7 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
   }
 
   let failedSearches = 0;
+  let quotaHit = false;
   let newMatches = 0;
   const toRate: { profile: RateProfile; job: RateJob; score: number }[] = [];
   for (const users of searches.values()) {
@@ -38,8 +39,13 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
     try {
       jobs = await searchJobs(target_title, country, location, remote_only);
     } catch (e) {
-      console.error(e); // one bad search shouldn't stop everyone else's
       failedSearches++;
+      if (e instanceof QuotaError) {
+        console.error(e.message); // the rest would 429 too, so stop here
+        quotaHit = true;
+        break;
+      }
+      console.error(e); // one bad search shouldn't stop everyone else's
       continue;
     }
     if (!jobs.length) continue;
@@ -78,5 +84,5 @@ export async function runSearches(db: SupabaseClient, profiles: SearchProfile[],
   }
 
   await rateNewMatches(db, toRate);
-  return { searches: searches.size, failedSearches, newMatches };
+  return { searches: searches.size, failedSearches, quotaHit, newMatches };
 }
